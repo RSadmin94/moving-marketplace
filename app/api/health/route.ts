@@ -1,25 +1,24 @@
-﻿import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+﻿import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    await prisma.healthCheck.create({ data: { status: 'ok' } });
-    const count = await prisma.healthCheck.count();
-
+    // Simple database connectivity check using raw query
+    await prisma.$queryRaw`SELECT 1`;
+    
     return NextResponse.json({
-      status: 'healthy',
-      database: 'connected',
-      healthChecks: count,
+      status: "ok",
       timestamp: new Date().toISOString(),
+      database: "connected",
     });
   } catch (error) {
+    console.error("Health check failed:", error);
     return NextResponse.json(
       {
-        status: 'unhealthy',
-        database: 'disconnected',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        status: "error",
+        timestamp: new Date().toISOString(),
+        database: "disconnected",
+        error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
