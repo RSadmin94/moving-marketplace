@@ -1,0 +1,429 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+
+  extensions = [postgis(schema: "public")]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  clerkId   String   @unique
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer      Customer?
+  mover         Mover?
+  notifications Notification[]
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs     Job[]
+  reviews  Review[]
+  disputes Dispute[] @relation("CustomerDisputes")
+}
+
+model Mover {
+  id                       String             @id @default(cuid())
+  userId                   String             @unique
+  businessName             String
+  businessEin              String?
+  baseLat                  Decimal            @db.Decimal(10, 8)
+  baseLng                  Decimal            @db.Decimal(11, 8)
+  serviceRadiusMiles       Int
+  subscriptionTier         SubscriptionTier   @default(FREE)
+  subscriptionStatus       SubscriptionStatus @default(INCOMPLETE)
+  platformStatus           PlatformStatus     @default(ACTIVE)
+  suspensionReason         String?
+  stripeCustomerId         String?            @unique
+  stripeSubscriptionId     String?
+  stripeCurrentPeriodStart DateTime?
+  stripeCurrentPeriodEnd   DateTime?
+  bidCreditsRemaining      Int                @default(0)
+  verificationStage        VerificationStage  @default(PENDING)
+  insuranceExpiryDate      DateTime?
+  reputationScore          Decimal            @default(0.00) @db.Decimal(3, 2)
+  totalJobsCompleted       Int                @default(0)
+  noShowCount              Int                @default(0)
+  disputeCount             Int                @default(0)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bids                  Bid[]
+  reviews               Review[]
+  verificationDocuments VerificationDocument[]
+  disputes              Dispute[]              @relation("MoverDisputes")
+  awardedJobs           Job[]                  @relation("AwardedMover")
+
+  @@index([baseLat, baseLng])
+}
+
+model Job {
+  id                     String    @id @default(cuid())
+  customerId             String
+  originAddressFull      String
+  originCity             String
+  originState            String
+  originZip              String
+  originLat              Decimal   @db.Decimal(10, 8)
+  originLng              Decimal   @db.Decimal(11, 8)
+  destinationAddressFull String
+  destinationCity        String
+  destinationState       String
+  destinationZip         String
+  destinationLat         Decimal?  @db.Decimal(10, 8)
+  destinationLng         Decimal?  @db.Decimal(11, 8)
+  status                 JobStatus @default(DRAFT)
+  moveDate               DateTime?
+  isFlexibleDate         Boolean   @default(false)
+  needsPacking           Boolean   @default(false)
+  needsStorage           Boolean   @default(false)
+  stairsAtOrigin         Boolean   @default(false)
+  stairsAtDestination    Boolean   @default(false)
+  elevatorAtOrigin       Boolean   @default(false)
+  elevatorAtDestination  Boolean   @default(false)
+  specialItems           String?
+  totalVolumeCuft        Decimal?  @db.Decimal(8, 2)
+  truckSizeRecommended   String?
+  awardedBidId           String?   @unique
+  awardedMoverId         String?
+  awardedAt              DateTime?
+  expiresAt              DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  awardedBid    Bid?           @relation("AwardedBid", fields: [awardedBidId], references: [id], onDelete: SetNull)
+  awardedMover  Mover?         @relation("AwardedMover", fields: [awardedMoverId], references: [id], onDelete: SetNull)
+  photos        Photo[]
+  scopeVersions ScopeVersion[]
+
+  inventoryItems InventoryItem[]
+  bids           Bid[]           @relation("JobBids")
+  reviews        Review[]
+  disputes       Dispute[]
+  notifications  Notification[]
+
+  @@index([originLat, originLng])
+  @@index([status])
+  @@index([customerId])
+  @@index([status, originLat, originLng])
+}
+
+model Photo {
+  id            String       @id @default(cuid())
+  jobId         String
+  room          Room
+  url           String
+  thumbnailUrl  String?
+  uploadStatus  UploadStatus @default(PENDING)
+  contentType   String
+  fileSizeBytes Int
+  source        PhotoSource  @default(UPLOAD)
+  capturedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+model ScopeVersion {
+  id              String    @id @default(cuid())
+  jobId           String
+  versionNumber   Int
+  lockedAt        DateTime?
+  isCurrent       Boolean   @default(true)
+  totalVolumeCuft Decimal?  @db.Decimal(8, 2)
+  itemsJson       Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  job            Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  inventoryItems InventoryItem[]
+  bids           Bid[]
+
+  @@unique([jobId, versionNumber])
+  @@index([jobId])
+  @@index([jobId, isCurrent])
+}
+
+model InventoryItem {
+  id                  String   @id @default(cuid())
+  jobId               String
+  scopeVersionId      String
+  room                Room
+  itemType            String
+  itemName            String
+  quantity            Int      @default(1)
+  volumeCuft          Decimal  @db.Decimal(6, 2)
+  isFragile           Boolean  @default(false)
+  requiresDisassembly Boolean  @default(false)
+  aiDetected          Boolean  @default(false)
+  aiConfidence        Decimal? @db.Decimal(3, 2)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  job          Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  scopeVersion ScopeVersion @relation(fields: [scopeVersionId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([scopeVersionId])
+}
+
+model Bid {
+  id                 String    @id @default(cuid())
+  jobId              String
+  moverId            String
+  scopeVersionId     String
+  priceTotal         Decimal   @db.Decimal(10, 2)
+  priceBreakdownJson Json?
+  truckSizeOffered   String?
+  moversCount        Int?
+  hoursEstimated     Decimal?  @db.Decimal(5, 2)
+  validUntil         DateTime?
+  expiresAt          DateTime
+  status             BidStatus @default(PENDING)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  job          Job          @relation("JobBids", fields: [jobId], references: [id], onDelete: Cascade)
+  mover        Mover        @relation(fields: [moverId], references: [id], onDelete: Cascade)
+  scopeVersion ScopeVersion @relation(fields: [scopeVersionId], references: [id], onDelete: Restrict)
+  awardedJob   Job?         @relation("AwardedBid")
+  reviews      Review[]
+  disputes     Dispute[]
+
+  @@unique([jobId, moverId])
+  @@index([jobId])
+  @@index([moverId])
+  @@index([status])
+  @@index([jobId, status])
+  @@index([moverId, status])
+}
+
+model Review {
+  id           String   @id @default(cuid())
+  jobId        String
+  bidId        String
+  moverId      String
+  customerId   String
+  rating       Int
+  onTime       Boolean  @default(true)
+  professional Boolean  @default(true)
+  careful      Boolean  @default(true)
+  comment      String?
+  response     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  job      Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  bid      Bid      @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  mover    Mover    @relation(fields: [moverId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, customerId])
+  @@index([moverId])
+}
+
+model Dispute {
+  id                   String        @id @default(cuid())
+  jobId                String
+  bidId                String?
+  reportedBy           ReportedBy
+  reportedByCustomerId String?
+  reportedByMoverId    String?
+  disputeType          DisputeType
+  description          String
+  status               DisputeStatus @default(OPEN)
+  resolutionNotes      String?
+  resolvedBy           String?
+  resolvedAt           DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  job                Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  bid                Bid?      @relation(fields: [bidId], references: [id], onDelete: SetNull)
+  reportedByCustomer Customer? @relation("CustomerDisputes", fields: [reportedByCustomerId], references: [id], onDelete: Cascade)
+  reportedByMover    Mover?    @relation("MoverDisputes", fields: [reportedByMoverId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([status])
+}
+
+model VerificationDocument {
+  id           String         @id @default(cuid())
+  moverId      String
+  documentType DocumentType
+  fileUrl      String
+  status       DocumentStatus @default(PENDING)
+  expiresAt    DateTime?
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  mover Mover @relation(fields: [moverId], references: [id], onDelete: Cascade)
+
+  @@index([moverId])
+}
+
+model StripeEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  eventType     String
+  payloadJson   Json
+  processedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([stripeEventId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  jobId     String?
+  type      String
+  title     String
+  message   String
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job? @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+enum UserRole {
+  CUSTOMER
+  MOVER
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PRO
+  ELITE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  TRIALING
+}
+
+enum PlatformStatus {
+  ACTIVE
+  WARNING
+  SUSPENDED
+  BANNED
+}
+
+enum VerificationStage {
+  PENDING
+  DOCUMENTS_SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+enum JobStatus {
+  DRAFT
+  PENDING_SCOPE
+  ACTIVE
+  AWARDED
+  COMPLETED
+  CANCELED
+  EXPIRED
+}
+
+enum Room {
+  LIVING_ROOM
+  KITCHEN
+  BEDROOM_1
+  BEDROOM_2
+  BEDROOM_3
+  DINING_ROOM
+  GARAGE
+  BASEMENT
+  ATTIC
+  OTHER
+}
+
+enum UploadStatus {
+  PENDING
+  UPLOADED
+  FAILED
+}
+
+enum PhotoSource {
+  CAMERA
+  UPLOAD
+}
+
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum DisputeType {
+  PRICE_DISAGREEMENT
+  DAMAGE_CLAIM
+  NO_SHOW
+  LATE_ARRIVAL
+  INCOMPLETE_SERVICE
+  UNPROFESSIONAL_CONDUCT
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+enum DocumentType {
+  BUSINESS_LICENSE
+  INSURANCE_COI
+  EQUIPMENT_PHOTOS
+  BACKGROUND_CHECK
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReportedBy {
+  CUSTOMER
+  MOVER
+}

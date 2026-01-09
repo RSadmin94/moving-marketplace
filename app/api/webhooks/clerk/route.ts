@@ -1,0 +1,76 @@
+export const runtime = "nodejs";
+
+import { headers } from "next/headers";
+import { Webhook } from "svix";
+import { prisma } from "@/lib/prisma";
+
+type ClerkUserCreatedEvent = {
+  type: "user.created";
+  data: {
+    id: string;
+    email_addresses: Array<{ email_address: string }>;
+  };
+};
+
+export async function POST(req: Request) {
+  const payload = await req.text();
+
+  // Next.js headers() is sync in Next 14, async in newer; this works either way
+  const h = await Promise.resolve(headers());
+
+  const svixId = h.get("svix-id");
+  const svixTimestamp = h.get("svix-timestamp");
+  const svixSignature = h.get("svix-signature");
+
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    return new Response("Missing Svix headers", { status: 400 });
+  }
+
+  const secret = process.env.CLERK_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error("Missing CLERK_WEBHOOK_SECRET");
+    return new Response("Server misconfigured", { status: 500 });
+  }
+
+  const wh = new Webhook(secret);
+
+  let evt: any;
+  try {
+    evt = wh.verify(payload, {
+      "svix-id": svixId,
+      "svix-timestamp": svixTimestamp,
+      "svix-signature": svixSignature,
+    });
+  } catch (err) {
+    console.error("Webhook verification failed:", err);
+    return new Response("Invalid signature", { status: 400 });
+  }
+
+  if (evt?.type === "user.created") {
+    const event = evt as ClerkUserCreatedEvent;
+
+    const clerkId = event.data?.id;
+    const email = event.data?.email_addresses?.[0]?.email_address;
+
+    if (!clerkId || !email) {
+      console.error("Missing clerkId or email in webhook payload", evt?.data);
+      return new Response("Missing clerkId/email", { status: 400 });
+    }
+
+    // IDEMPOTENT: safe for Clerk webhook retries
+    await prisma.user.upsert({
+      where: { clerkId },
+      update: { email },
+      create: {
+        clerkId,
+        email,
+        role: "CUSTOMER",
+      },
+    });
+
+    console.log(`User synced to DB: ${email} (${clerkId})`);
+  }
+
+  return new Response("OK", { status: 200 });
+}
+
