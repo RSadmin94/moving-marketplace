@@ -3,9 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    // Simple database connectivity check using raw query
     await prisma.$queryRaw`SELECT 1`;
-    
+
     return NextResponse.json({
       status: "ok",
       timestamp: new Date().toISOString(),
