@@ -8,12 +8,15 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
-  }
+export default clerkMiddleware(async (auth, req) => {
+  if (isPublicRoute(req)) return;
+  await auth.protect();
 });
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: [
+    "/((?!_next|static|favicon.ico).*)",
+    "/",
+    "/(api|trpc)(.*)",
+  ],
 };
