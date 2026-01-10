@@ -57,7 +57,7 @@ export default async function JobDetailPage({
 
           <div>
             <strong>Move Date:</strong>{" "}
-            {new Date(job.moveDate).toLocaleDateString()}
+            {job.moveDate ? new Date(job.moveDate).toLocaleDateString() : "TBD"}
           </div>
 
           {job.specialItems && (
