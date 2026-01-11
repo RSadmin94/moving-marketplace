@@ -37,9 +37,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { originZip, destinationZip, moveDate, description } = body;
 
+    // Validate required fields
     if (!originZip || !destinationZip || !moveDate) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields" },
+        { success: false, error: "Missing required fields: originZip, destinationZip, and moveDate are required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate ZIP format (basic)
+    if (!/^\d{5}$/.test(originZip) || !/^\d{5}$/.test(destinationZip)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid ZIP code format. Must be 5 digits" },
+        { status: 400 }
+      );
+    }
+
+    // Validate moveDate is a valid date
+    const moveDateObj = new Date(moveDate);
+    if (isNaN(moveDateObj.getTime())) {
+      return NextResponse.json(
+        { success: false, error: "Invalid move date format" },
         { status: 400 }
       );
     }
@@ -50,20 +68,20 @@ export async function POST(request: NextRequest) {
         originAddressFull: `ZIP: ${originZip}`,
         originCity: "",
         originState: "",
-        originZip: originZip,
+        originZip: originZip.trim(),
         originLat: 0,
         originLng: 0,
         destinationAddressFull: `ZIP: ${destinationZip}`,
         destinationCity: "",
         destinationState: "",
-        destinationZip: destinationZip,
-        destinationLat: 0,
-        destinationLng: 0,
-        moveDate: new Date(moveDate),
+        destinationZip: destinationZip.trim(),
+        destinationLat: null,
+        destinationLng: null,
+        moveDate: moveDateObj,
         isFlexibleDate: false,
-        specialItems: description || "",
+        specialItems: description?.trim() || null,
         status: "ACTIVE",
-        totalVolumeCuft: 0,
+        totalVolumeCuft: null,
       }
     });
 

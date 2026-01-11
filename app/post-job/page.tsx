@@ -36,7 +36,7 @@ export default function PostJobPage() {
         setError(result.error || "Failed to create job");
         setLoading(false);
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Network error. Please try again.");
       setLoading(false);
     }

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Phase 3: Ignore scripts (build helpers, not app code)
+    "scripts/**",
   ]),
 ]);
 

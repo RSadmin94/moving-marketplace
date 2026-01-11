@@ -15,7 +15,6 @@ type ClerkUserCreatedEvent = {
 export async function POST(req: Request) {
   const payload = await req.text();
 
-  // Next.js headers() is sync in Next 14, async in newer; this works either way
   const h = await Promise.resolve(headers());
 
   const svixId = h.get("svix-id");
@@ -34,7 +33,7 @@ export async function POST(req: Request) {
 
   const wh = new Webhook(secret);
 
-  let evt: any;
+  let evt: unknown;
   try {
     evt = wh.verify(payload, {
       "svix-id": svixId,
@@ -46,14 +45,17 @@ export async function POST(req: Request) {
     return new Response("Invalid signature", { status: 400 });
   }
 
-  if (evt?.type === "user.created") {
-    const event = evt as ClerkUserCreatedEvent;
+  // Type guard after verification
+  const event = evt as { type?: string; data?: unknown };
 
-    const clerkId = event.data?.id;
-    const email = event.data?.email_addresses?.[0]?.email_address;
+  if (event?.type === "user.created") {
+    const userEvent = event as ClerkUserCreatedEvent;
+
+    const clerkId = userEvent.data?.id;
+    const email = userEvent.data?.email_addresses?.[0]?.email_address;
 
     if (!clerkId || !email) {
-      console.error("Missing clerkId or email in webhook payload", evt?.data);
+      console.error("Missing clerkId or email in webhook payload", event.data);
       return new Response("Missing clerkId/email", { status: 400 });
     }
 
@@ -73,4 +75,3 @@ export async function POST(req: Request) {
 
   return new Response("OK", { status: 200 });
 }
-
