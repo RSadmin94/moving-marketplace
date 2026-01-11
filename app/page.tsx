@@ -1,9 +1,32 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default function Page() {
+function HomeContent() {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      const role = user.publicMetadata?.role as string | undefined;
+      if (!role) {
+        router.push("/choose-role");
+      }
+    }
+  }, [user, isLoaded, router]);
+
+  if (!isLoaded) {
+    return (
+      <main style={{ padding: 24, fontFamily: "system-ui" }}>
+        <h1>Moving Marketplace</h1>
+        <p>Loading...</p>
+      </main>
+    );
+  }
+
   return (
     <main style={{ padding: 24, fontFamily: "system-ui" }}>
       <h1>Moving Marketplace</h1>
@@ -21,4 +44,8 @@ export default function Page() {
       </SignedIn>
     </main>
   );
+}
+
+export default function Page() {
+  return <HomeContent />;
 }
