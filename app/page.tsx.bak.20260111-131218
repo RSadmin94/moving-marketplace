@@ -1,0 +1,133 @@
+﻿"use client";
+
+import Link from "next/link";
+import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+function HomeContent() {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && user) {
+      const role = user.publicMetadata?.role as string | undefined;
+      if (!role) {
+        router.push("/choose-role");
+      }
+    }
+  }, [user, isLoaded, router]);
+
+  if (!isLoaded) {
+    return (
+      <main style={{ padding: 24, fontFamily: "system-ui" }}>
+        <h1>Moving Marketplace</h1>
+        <p>Loading...</p>
+            <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <Link
+          href="/jobs"
+          style={{
+            padding: "0.5rem 1rem",
+            backgroundColor: "#111",
+            color: "white",
+            textDecoration: "none",
+            borderRadius: "6px",
+          }}
+        >
+          Browse Jobs
+        </Link>
+
+        <Link
+          href="/post-job"
+          style={{
+            padding: "0.5rem 1rem",
+            border: "1px solid #111",
+            color: "#111",
+            textDecoration: "none",
+            borderRadius: "6px",
+          }}
+        >
+          Post a Job
+        </Link>
+
+        <Link
+          href="/mover"
+          style={{
+            padding: "0.5rem 1rem",
+            border: "1px solid #111",
+            color: "#111",
+            textDecoration: "none",
+            borderRadius: "6px",
+          }}
+        >
+          Mover Dashboard
+        </Link>
+      </div>
+</main>
+    );
+  }
+
+  return (
+    <main style={{ padding: 24, fontFamily: "system-ui" }}>
+      <h1>Moving Marketplace</h1>
+
+      <SignedOut>
+        <p>
+          <Link href="/sign-up">Create account</Link>{" | "}
+          <Link href="/sign-in">Sign in</Link>
+        </p>
+      </SignedOut>
+
+      <SignedIn>
+        <p>You are signed in.</p>
+        <UserButton afterSignOutUrl="/" />
+      </SignedIn>
+
+      <div style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <Link
+          href="/jobs"
+          style={{
+            padding: "0.5rem 1rem",
+            backgroundColor: "#111",
+            color: "white",
+            textDecoration: "none",
+            borderRadius: "6px",
+          }}
+        >
+          Browse Jobs
+        </Link>
+
+        <Link
+          href="/post-job"
+          style={{
+            padding: "0.5rem 1rem",
+            border: "1px solid #111",
+            color: "#111",
+            textDecoration: "none",
+            borderRadius: "6px",
+          }}
+        >
+          Post a Job
+        </Link>
+
+        <Link
+          href="/mover"
+          style={{
+            padding: "0.5rem 1rem",
+            border: "1px solid #111",
+            color: "#111",
+            textDecoration: "none",
+            borderRadius: "6px",
+          }}
+        >
+          Mover Dashboard
+        </Link>
+      </div>
+    </main>
+  );
+}
+
+export default function Page() {
+  return <HomeContent />;
+}
+
