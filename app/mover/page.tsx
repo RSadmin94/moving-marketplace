@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 
@@ -47,6 +47,20 @@ export default async function MoverPage() {
 
   if (!userId) {
     redirect("/sign-in");
+  }
+
+  // Check user role - MOVER required for this page
+  const client = await clerkClient();
+  const user = await client.users.getUser(userId);
+  const role = user.publicMetadata?.role as string | undefined;
+
+  if (!role) {
+    redirect("/choose-role");
+  }
+
+  if (role !== "MOVER") {
+    // If role is SHIPPER, redirect to /post-job
+    redirect("/post-job");
   }
 
   const interests = await fetchInterests(userId);
