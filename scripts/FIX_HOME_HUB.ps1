@@ -1,4 +1,20 @@
-﻿import Link from "next/link";
+# scripts/FIX_HOME_HUB.ps1
+$ErrorActionPreference = "Stop"
+
+$path = "app/page.tsx"
+if (!(Test-Path -LiteralPath $path)) {
+  throw "app/page.tsx not found"
+}
+
+# Create backup with timestamp
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$backupPath = "$path.bak.$timestamp"
+Copy-Item -LiteralPath $path -Destination $backupPath
+Write-Host "Backed up app/page.tsx to $backupPath" -ForegroundColor Cyan
+
+# New server component content
+$newContent = @'
+import Link from "next/link";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
@@ -108,3 +124,29 @@ export default async function Page() {
     </main>
   );
 }
+'@
+
+# Write new content
+Set-Content -LiteralPath $path -Value $newContent -Encoding UTF8
+Write-Host "Wrote new server component to app/page.tsx" -ForegroundColor Green
+
+# Gates
+Write-Host "Running pnpm lint..." -ForegroundColor Cyan
+pnpm lint
+if ($LASTEXITCODE -ne 0) { 
+  Write-Host "Lint failed. Restoring backup..." -ForegroundColor Red
+  Copy-Item -LiteralPath $backupPath -Destination $path -Force
+  throw "Lint failed. STOP. Backup restored to $path"
+}
+
+Write-Host "Running pnpm build..." -ForegroundColor Cyan
+pnpm build
+if ($LASTEXITCODE -ne 0) { 
+  Write-Host "Build failed. Restoring backup..." -ForegroundColor Red
+  Copy-Item -LiteralPath $backupPath -Destination $path -Force
+  throw "Build failed. STOP. Backup restored to $path"
+}
+
+Write-Host "Home hub fix verified (lint + build passed)." -ForegroundColor Green
+Write-Host "Backup saved at: $backupPath" -ForegroundColor Yellow
+
