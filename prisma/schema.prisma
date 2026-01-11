@@ -118,6 +118,7 @@ model Job {
   reviews        Review[]
   disputes       Dispute[]
   notifications  Notification[]
+  interests      Interest[]
 
   @@index([originLat, originLng])
   @@index([status])
@@ -295,6 +296,19 @@ model StripeEvent {
   updatedAt     DateTime @updatedAt
 
   @@index([stripeEventId])
+}
+
+model Interest {
+  id        String   @id @default(cuid())
+  jobId     String
+  userId    String
+  createdAt DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, userId])
+  @@index([jobId])
+  @@index([userId])
 }
 
 model Notification {

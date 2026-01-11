@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import ExpressInterestButton from "./ExpressInterestButton";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -108,6 +109,8 @@ export default async function JobDetailPage({
             <div>Posted: {new Date(job.createdAt).toISOString()}</div>
           </div>
         </div>
+
+        <ExpressInterestButton jobId={job.id} />
       </div>
     </main>
   );
