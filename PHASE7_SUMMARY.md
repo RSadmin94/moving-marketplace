@@ -308,4 +308,3 @@ Phase 7: enforce role-based access on mover + post-job + gate
 
 - **Performance**: Role checks use `clerkClient().getUser()` which is a server-side API call. This is acceptable for protected routes that require auth anyway.
 
-

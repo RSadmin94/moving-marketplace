@@ -295,4 +295,3 @@ Phase 6: role selection (shipper vs mover) via Clerk publicMetadata + gate
 
 - **Error Handling**: The API route validates role is exactly "MOVER" or "SHIPPER" and returns appropriate error messages.
 
-

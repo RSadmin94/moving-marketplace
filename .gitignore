@@ -48,9 +48,3 @@ node_modules
 .next
 .vercel
 .env*.local
-
-app/page.tsx.bak*
-
-*.bak
-
-*.bak.*

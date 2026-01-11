@@ -3,8 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
-  const authResult = await auth();
-  const { userId } = authResult;
+  const { userId } = auth();
 
   if (!userId) {
     return NextResponse.json(
@@ -32,9 +31,9 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, interest });
-  } catch (err: unknown) {
+  } catch (err: any) {
     // ✅ Handle unique constraint explicitly
-    if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
+    if (err.code === "P2002") {
       return NextResponse.json(
         { success: true, alreadyExists: true },
         { status: 200 }
