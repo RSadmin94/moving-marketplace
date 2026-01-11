@@ -348,3 +348,4 @@ All API routes now return stable JSON shape with success/error fields.
 - **API Validation**: All required fields are validated. ZIP codes must be 5 digits. Move date must be valid Date format.
 - **Build Failure**: If build fails due to missing Clerk keys, ensure `.env.local` exists and contains `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`.
 
+

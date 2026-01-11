@@ -1,4 +1,4 @@
-generator client {
+﻿generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["multiSchema", "postgresqlExtensions"]
 }
@@ -8,7 +8,7 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 
-  extensions = [postgis(schema: "public")]
+  extensions = [postgis(schema: "public"), pg_graphql, pg_stat_statements, pgcrypto, supabase_vault, uuid_ossp]
 }
 
 model User {
@@ -76,6 +76,7 @@ model Mover {
 model Job {
   id                     String    @id @default(cuid())
   customerId             String
+  shipperId              String?
   originAddressFull      String
   originCity             String
   originState            String
@@ -441,3 +442,4 @@ enum ReportedBy {
   CUSTOMER
   MOVER
 }
+

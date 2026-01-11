@@ -366,3 +366,4 @@ Phase 4: Express Interest (minimal marketplace interaction)
 
 - **API Pattern**: The API follows the same pattern as `/api/jobs` route: returns `{ success: boolean, ... }` JSON responses with proper error handling.
 
+
