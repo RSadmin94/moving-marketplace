@@ -68,30 +68,48 @@ export default async function Page() {
         >
           Browse Jobs
         </Link>
-        <Link
-          href="/post-job"
-          style={{
-            padding: "0.5rem 1rem",
-            border: "1px solid #111",
-            color: "#111",
-            textDecoration: "none",
-            borderRadius: "6px",
-          }}
-        >
-          Post a Job
-        </Link>
-        <Link
-          href="/mover"
-          style={{
-            padding: "0.5rem 1rem",
-            border: "1px solid #111",
-            color: "#111",
-            textDecoration: "none",
-            borderRadius: "6px",
-          }}
-        >
-          Mover Dashboard
-        </Link>
+        {role === "SHIPPER" && (
+          <Link
+            href="/post-job"
+            style={{
+              padding: "0.5rem 1rem",
+              border: "1px solid #111",
+              color: "#111",
+              textDecoration: "none",
+              borderRadius: "6px",
+            }}
+          >
+            Post a Job
+          </Link>
+        )}
+        {role === "MOVER" && (
+          <Link
+            href="/mover"
+            style={{
+              padding: "0.5rem 1rem",
+              border: "1px solid #111",
+              color: "#111",
+              textDecoration: "none",
+              borderRadius: "6px",
+            }}
+          >
+            Mover Dashboard
+          </Link>
+        )}
+        {role === "SHIPPER" && (
+          <Link
+            href="/shipper"
+            style={{
+              padding: "0.5rem 1rem",
+              border: "1px solid #111",
+              color: "#111",
+              textDecoration: "none",
+              borderRadius: "6px",
+            }}
+          >
+            Shipper Dashboard
+          </Link>
+        )}
         <Link
           href={continueLink}
           style={{

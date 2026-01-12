@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import ExpressInterestButton from "./ExpressInterestButton";
 
@@ -12,6 +13,7 @@ type Job = {
   moveDate: Date | null;
   specialItems: string | null;
   createdAt: Date;
+  shipperId: string | null;
 };
 
 async function fetchJob(id: string): Promise<Job | null> {
@@ -24,7 +26,8 @@ async function fetchJob(id: string): Promise<Job | null> {
         destinationZip: true,
         moveDate: true,
         specialItems: true,
-        createdAt: true
+        createdAt: true,
+        shipperId: true
       }
     });
     
@@ -42,6 +45,15 @@ export default async function JobDetailPage({
 }) {
   const { id } = await params;
   const job = await fetchJob(id);
+  const { userId } = await auth();
+
+  // Get user role
+  let userRole: string | undefined;
+  if (userId) {
+    const clerk = await clerkClient();
+    const user = await clerk.users.getUser(userId);
+    userRole = user.publicMetadata.role as string | undefined;
+  }
 
   if (!job) {
     return (
@@ -110,7 +122,28 @@ export default async function JobDetailPage({
           </div>
         </div>
 
-        <ExpressInterestButton jobId={job.id} />
+        {/* Show Express Interest ONLY for MOVERs */}
+        {userRole === "MOVER" && <ExpressInterestButton jobId={job.id} />}
+        
+        {/* Show shipper dashboard link if user is a SHIPPER and owns this job */}
+        {userRole === "SHIPPER" && userId === job.shipperId && (
+          <div style={{ marginTop: "1.5rem" }}>
+            <Link
+              href="/shipper"
+              style={{
+                display: "inline-block",
+                padding: "0.75rem 1.5rem",
+                backgroundColor: "#0070f3",
+                color: "white",
+                borderRadius: "6px",
+                textDecoration: "none",
+                fontWeight: "bold"
+              }}
+            >
+              View Your Dashboard →
+            </Link>
+          </div>
+        )}
       </div>
     </main>
   );
