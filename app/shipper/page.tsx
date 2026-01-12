@@ -29,50 +29,72 @@ export default async function ShipperDashboardPage() {
     redirect("/");
   }
 
-  // Fetch shipper's jobs
-  const jobs = await prisma.job.findMany({
-    where: {
-      shipperId: userId,
-      status: "ACTIVE",
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    select: {
-      id: true,
-      originZip: true,
-      destinationZip: true,
-      moveDate: true,
-      createdAt: true,
-    },
-  });
+  // Fetch shipper's jobs with error handling
+  let jobs: Array<{
+    id: string;
+    originZip: string;
+    destinationZip: string;
+    moveDate: Date | null;
+    createdAt: Date;
+  }> = [];
+  let jobsWithCounts: Array<{
+    id: string;
+    originZip: string;
+    destinationZip: string;
+    moveDate: Date | null;
+    createdAt: Date;
+    interestCount: number;
+  }> = [];
+  let dbError = false;
 
-  // Compute interest counts using groupBy
-  const jobIds = jobs.map((j) => j.id);
-  const interestCounts = jobIds.length > 0
-    ? await prisma.interest.groupBy({
-        by: ["jobId"],
-        where: {
-          jobId: { in: jobIds },
-        },
-        _count: {
-          jobId: true,
-        },
-      })
-    : [];
+  try {
+    jobs = await prisma.job.findMany({
+      where: {
+        shipperId: userId,
+        status: "ACTIVE",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        originZip: true,
+        destinationZip: true,
+        moveDate: true,
+        createdAt: true,
+      },
+    });
 
-  // Build count map
-  const countMap = new Map<string, number>();
-  for (const item of interestCounts) {
-    countMap.set(item.jobId, item._count.jobId);
+    // Compute interest counts using groupBy
+    const jobIds = jobs.map((j) => j.id);
+    const interestCounts = jobIds.length > 0
+      ? await prisma.interest.groupBy({
+          by: ["jobId"],
+          where: {
+            jobId: { in: jobIds },
+          },
+          _count: {
+            jobId: true,
+          },
+        })
+      : [];
+
+    // Build count map
+    const countMap = new Map<string, number>();
+    for (const item of interestCounts) {
+      countMap.set(item.jobId, item._count.jobId);
+    }
+
+    // Merge counts with jobs
+    jobsWithCounts = jobs.map((j) => ({
+      ...j,
+      interestCount: countMap.get(j.id) ?? 0,
+    }));
+  } catch (error) {
+    console.error("Failed to fetch shipper jobs:", error);
+    dbError = true;
+    // Continue with empty arrays - will show error message
   }
-
-  // Merge counts with jobs
-  type JobWithCount = (typeof jobs)[0] & { interestCount: number };
-  const jobsWithCounts: JobWithCount[] = jobs.map((j) => ({
-    ...j,
-    interestCount: countMap.get(j.id) ?? 0,
-  }));
 
   return (
     <main style={{ padding: "2rem", fontFamily: "system-ui", maxWidth: "1200px", margin: "0 auto" }}>
@@ -85,7 +107,19 @@ export default async function ShipperDashboardPage() {
 
       <h2 style={{ marginTop: "2rem", marginBottom: "1rem" }}>Your Posted Jobs</h2>
 
-      {jobs.length === 0 ? (
+      {dbError ? (
+        <div style={{ 
+          padding: "2rem", 
+          backgroundColor: "#fff3cd", 
+          borderRadius: "8px",
+          textAlign: "center",
+          border: "1px solid #ffc107"
+        }}>
+          <p style={{ margin: "0 0 1rem 0", color: "#856404" }}>
+            Unable to load jobs. Please try refreshing the page.
+          </p>
+        </div>
+      ) : jobs.length === 0 ? (
         <div style={{ 
           padding: "2rem", 
           backgroundColor: "#f5f5f5", 
