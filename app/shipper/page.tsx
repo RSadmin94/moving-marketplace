@@ -29,7 +29,7 @@ export default async function ShipperDashboardPage() {
     redirect("/");
   }
 
-  // Fetch shipper's jobs with interest counts
+  // Fetch shipper's jobs
   const jobs = await prisma.job.findMany({
     where: {
       shipperId: userId,
@@ -44,13 +44,35 @@ export default async function ShipperDashboardPage() {
       destinationZip: true,
       moveDate: true,
       createdAt: true,
-      _count: {
-        select: {
-          interests: true,
-        },
-      },
     },
   });
+
+  // Compute interest counts using groupBy
+  const jobIds = jobs.map((j) => j.id);
+  const interestCounts = jobIds.length > 0
+    ? await prisma.interest.groupBy({
+        by: ["jobId"],
+        where: {
+          jobId: { in: jobIds },
+        },
+        _count: {
+          jobId: true,
+        },
+      })
+    : [];
+
+  // Build count map
+  const countMap = new Map<string, number>();
+  for (const item of interestCounts) {
+    countMap.set(item.jobId, item._count.jobId);
+  }
+
+  // Merge counts with jobs
+  type JobWithCount = (typeof jobs)[0] & { interestCount: number };
+  const jobsWithCounts: JobWithCount[] = jobs.map((j) => ({
+    ...j,
+    interestCount: countMap.get(j.id) ?? 0,
+  }));
 
   return (
     <main style={{ padding: "2rem", fontFamily: "system-ui", maxWidth: "1200px", margin: "0 auto" }}>
@@ -83,8 +105,8 @@ export default async function ShipperDashboardPage() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {jobs.map((job) => {
-            const interestCount = job._count.interests;
+          {jobsWithCounts.map((job) => {
+            const interestCount = job.interestCount;
             let moveDateLabel = "TBD";
             if (job.moveDate) {
               try {
