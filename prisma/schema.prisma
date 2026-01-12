@@ -19,9 +19,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  customer      Customer?
+  customer      Customer?      
   mover         Mover?
   notifications Notification[]
+  shipperJobs   Job[]          @relation("ShipperJobs")
 }
 
 model Customer {
@@ -76,6 +77,7 @@ model Mover {
 model Job {
   id                     String    @id @default(cuid())
   customerId             String
+  shipperId              String?
   originAddressFull      String
   originCity             String
   originState            String
@@ -108,6 +110,7 @@ model Job {
   updatedAt              DateTime  @updatedAt
 
   customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  shipper       User?          @relation("ShipperJobs", fields: [shipperId], references: [clerkId], onDelete: SetNull)
   awardedBid    Bid?           @relation("AwardedBid", fields: [awardedBidId], references: [id], onDelete: SetNull)
   awardedMover  Mover?         @relation("AwardedMover", fields: [awardedMoverId], references: [id], onDelete: SetNull)
   photos        Photo[]

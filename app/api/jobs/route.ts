@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     const job = await prisma.job.create({
       data: {
         customerId: customer.id,
+        shipperId: userId,
         originAddressFull: `ZIP: ${originZip}`,
         originCity: "",
         originState: "",
