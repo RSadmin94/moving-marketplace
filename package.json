@@ -12,10 +12,14 @@
   "dependencies": {
     "@clerk/nextjs": "^6.36.7",
     "@prisma/client": "6.19.1",
+    "@supabase/supabase-js": "^2.90.1",
     "next": "16.1.1",
+    "openai": "^6.16.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "svix": "^1.84.1"
+    "sharp": "^0.34.5",
+    "svix": "^1.84.1",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

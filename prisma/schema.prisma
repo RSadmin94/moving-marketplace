@@ -19,7 +19,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  customer      Customer?      
+  customer      Customer?
   mover         Mover?
   notifications Notification[]
   shipperJobs   Job[]          @relation("ShipperJobs")
@@ -331,6 +331,19 @@ model Notification {
 
   @@index([userId])
   @@index([isRead])
+}
+
+model Estimate {
+  id        String   @id @default(cuid())
+  shipperId String
+  jobId     String?
+  inputData Json
+  photoData Json
+  aiResult  Json
+  createdAt DateTime @default(now())
+
+  @@index([shipperId])
+  @@index([jobId])
 }
 
 enum UserRole {
